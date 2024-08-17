@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -32,7 +33,7 @@ func main() {
 
 	fmt.Println("start getting albums")
 	albumList, err := GetAlbumList(db)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.Fatal("Error getting album list", err)
 	}
 	for _, album := range albumList {
@@ -43,10 +44,12 @@ func main() {
 	fmt.Println("start getting idx=1 album")
 	targetId := 1
 	album, err := GetAlbum(db, targetId)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.Fatal("Error getting album", err)
 	}
-	fmt.Printf("album idx=%d, val=%+v\n", targetId, album)
+	if album != nil {
+		fmt.Printf("album idx=%d, val=%+v\n", targetId, album)
+	}
 	fmt.Println("------")
 
 	fmt.Println("start inserting album")
