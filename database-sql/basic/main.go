@@ -33,7 +33,7 @@ func main() {
 
 	fmt.Println("start getting albums")
 	albumList, err := GetAlbumList(db)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		log.Fatal("Error getting album list", err)
 	}
 	for _, album := range albumList {
@@ -44,7 +44,7 @@ func main() {
 	fmt.Println("start getting idx=1 album")
 	targetId := 1
 	album, err := GetAlbum(db, targetId)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
 		log.Fatal("Error getting album", err)
 	}
 	if album != nil {
@@ -102,8 +102,8 @@ func InitDB() (*sql.DB, error) {
 func GetAlbumList(db *sql.DB) ([]*AlbumInfo, error) {
 	execSQL := `select id, title, artist, price from album`
 	rows, err := db.Query(execSQL)
-	if err != nil {
-		return nil, fmt.Errorf("executing query error: %v", err)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("executing query error: %w", err)
 	}
 	defer rows.Close()
 
@@ -123,7 +123,7 @@ func GetAlbumList(db *sql.DB) ([]*AlbumInfo, error) {
 func GetAlbum(db *sql.DB, id int) (*AlbumInfo, error) {
 	var albumInfo AlbumInfo
 	execSQL := `select id, title, artist, price from album where id = ?`
-	if err := db.QueryRow(execSQL, id).Scan(&albumInfo.Id, &albumInfo.Title, &albumInfo.Artist, &albumInfo.Price); err != nil {
+	if err := db.QueryRow(execSQL, id).Scan(&albumInfo.Id, &albumInfo.Title, &albumInfo.Artist, &albumInfo.Price); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("db query fail: %v", err)
 	}
 
@@ -133,7 +133,7 @@ func GetAlbum(db *sql.DB, id int) (*AlbumInfo, error) {
 func InsertAlbum(db *sql.DB, albumInfo *AlbumInfo) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
-		log.Fatal("begin tx fail", err)
+		return fmt.Errorf("begin tx error: %w", err)
 	}
 	defer func() {
 		switch err {
@@ -162,7 +162,7 @@ func InsertAlbum(db *sql.DB, albumInfo *AlbumInfo) (err error) {
 func UpdateAlbum(db *sql.DB, info AlbumInfo, query AlbumInfo) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("begin tx fail: %v", err)
+		return fmt.Errorf("begin tx fail: %w", err)
 	}
 	defer func() {
 		switch err {
@@ -190,7 +190,7 @@ func UpdateAlbum(db *sql.DB, info AlbumInfo, query AlbumInfo) error {
 func DeleteAlbum(db *sql.DB, id int) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("begin tx fail: %v", err)
+		return fmt.Errorf("begin tx fail: %w", err)
 	}
 	defer func() {
 		switch err {
